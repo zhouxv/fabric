@@ -1,4 +1,4 @@
-package oqs
+package pqc
 
 import "C"
 import (

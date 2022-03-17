@@ -1,4 +1,4 @@
-package oqs
+package pqc
 
 //func TestBadLibrary(t *testing.T) {
 //	_, err := LoadLib("bad")

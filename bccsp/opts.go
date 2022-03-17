@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package bccsp
 
 const (
+	PQC = "PQC"
 	// ECDSA Elliptic Curve Digital Signature Algorithm (key gen, import, sign, verify),
 	// at default security level.
 	// Each BCCSP may or may not support default security level. If not supported than
@@ -262,5 +263,54 @@ func (opts *X509PublicKeyImportOpts) Algorithm() string {
 // Ephemeral returns true if the key to generate has to be ephemeral,
 // false otherwise.
 func (opts *X509PublicKeyImportOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+// PQCKeyGenOpts contains options for PQC key generation.
+type PQCKeyGenOpts struct {
+	Temporary       bool
+	SignatureScheme string
+}
+
+// Algorithm returns the key generation algorithm identifier (to be used).
+func (opts *PQCKeyGenOpts) Algorithm() string {
+	return opts.SignatureScheme
+}
+
+// Ephemeral returns true if the key to generate has to be ephemeral,
+// false otherwise.
+func (opts *PQCKeyGenOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+// PQCGoPublicKeyImportOpts contains options for Dilithium key importation from Dilithium.PublicKey(public key importation in go pqc struct format.)
+type PQCGoPublicKeyImportOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key importation algorithm identifier (to be used).
+func (opts *PQCGoPublicKeyImportOpts) Algorithm() string {
+	return PQC
+}
+
+// Ephemeral returns true if the key to generate has to be ephemeral,
+// false otherwise.
+func (opts *PQCGoPublicKeyImportOpts) Ephemeral() bool {
+	return opts.Temporary
+}
+
+// PQCPublicKeyImportOpts contains options for PQC key importation from PQC.PublicKey(public key importation in DER format)
+type PQCPublicKeyImportOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key importation algorithm identifier (to be used).
+func (opts *PQCPublicKeyImportOpts) Algorithm() string {
+	return PQC
+}
+
+// Ephemeral returns true if the key to generate has to be ephemeral,
+// false otherwise.
+func (opts *PQCPublicKeyImportOpts) Ephemeral() bool {
 	return opts.Temporary
 }
