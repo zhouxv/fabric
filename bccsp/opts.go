@@ -283,7 +283,7 @@ func (opts *PQCKeyGenOpts) Ephemeral() bool {
 	return opts.Temporary
 }
 
-// PQCGoPublicKeyImportOpts contains options for Dilithium key importation from Dilithium.PublicKey(public key importation in go pqc struct format.)
+// PQCGoPublicKeyImportOpts contains options for PQC key importation from PQC.PublicKey(public key importation in go pqc struct format.)
 type PQCGoPublicKeyImportOpts struct {
 	Temporary bool
 }

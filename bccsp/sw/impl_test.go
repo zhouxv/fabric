@@ -31,6 +31,7 @@ import (
 	"github.com/hyperledger/fabric/bccsp/sw/mocks"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -1368,4 +1369,309 @@ func TestAddWrapper(t *testing.T) {
 	err := sw.AddWrapper(reflect.TypeOf(cleanup), cleanup)
 	assert.Error(t, err)
 	assert.Equal(t, err.Error(), "wrapper type not valid, must be on of: KeyGenerator, KeyDeriver, KeyImporter, Encryptor, Decryptor, Signer, Verifier, Hasher")
+}
+
+func TestPQCKeyGenEphemeral(t *testing.T) {
+	t.Parallel()
+	provider, _, cleanup := currentTestConfig.Provider(t)
+	defer cleanup()
+
+	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: true})
+	if err != nil {
+		t.Fatalf("Failed generating PQC key [%s]", err)
+	}
+	if k == nil {
+		t.Fatal("Failed generating PQC key. Key must be different from nil")
+	}
+	if !k.Private() {
+		t.Fatal("Failed generating PQC key. Key should be private")
+	}
+	if k.Symmetric() {
+		t.Fatal("Failed generating PQC key. Key should be asymmetric")
+	}
+	ski := k.SKI()
+	if len(ski) == 0 {
+		t.Fatal("SKI not valid. Zero length.")
+	}
+	pk, err := k.PublicKey()
+	if err != nil {
+		t.Fatalf("Failed getting public key from private PQC key [%s]", err)
+	}
+	raw, err := pk.Bytes()
+	if err != nil {
+		t.Fatalf("Failed marshalling PQC public key [%s]", err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("Failed marshalling PQC public key. Zero length")
+	}
+}
+
+func TestPQCKeyGenNonEphemeral(t *testing.T) {
+	t.Parallel()
+	provider, _, cleanup := currentTestConfig.Provider(t)
+	defer cleanup()
+
+	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false})
+	if err != nil {
+		t.Fatalf("Failed generating PQC key [%s]", err)
+	}
+	if k == nil {
+		t.Fatal("Failed generating PQC key. Key must be different from nil")
+	}
+	if !k.Private() {
+		t.Fatal("Failed generating PQC key. Key should be private")
+	}
+	if k.Symmetric() {
+		t.Fatal("Failed generating PQC key. Key should be asymmetric")
+	}
+	ski := k.SKI()
+	if len(ski) == 0 {
+		t.Fatal("SKI not valid. Zero length.")
+	}
+	pk, err := k.PublicKey()
+	if err != nil {
+		t.Fatalf("Failed getting public key from private PQC key [%s]", err)
+	}
+	raw, err := pk.Bytes()
+	if err != nil {
+		t.Fatalf("Failed marshalling PQC public key [%s]", err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("Failed marshalling PQC public key. Zero length")
+	}
+}
+
+func TestPQCSign(t *testing.T) {
+	t.Parallel()
+	provider, _, cleanup := currentTestConfig.Provider(t)
+	defer cleanup()
+
+	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false})
+	if err != nil {
+		t.Fatalf("Failed generating PQC key [%s]", err)
+	}
+
+	msg := []byte("Hello World")
+
+	digest, err := provider.Hash(msg, &bccsp.SHAOpts{})
+	if err != nil {
+		t.Fatalf("Failed computing HASH [%s]", err)
+	}
+
+	signature, err := provider.Sign(k, digest, nil)
+	if err != nil {
+		t.Fatalf("Failed generating PQC signature [%s]", err)
+	}
+	if len(signature) == 0 {
+		t.Fatal("Failed generating PQC key. Signature must be different from nil")
+	}
+}
+
+func TestPQCVerify(t *testing.T) {
+	t.Parallel()
+	provider, ks, cleanup := currentTestConfig.Provider(t)
+	defer cleanup()
+
+	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false})
+	if err != nil {
+		t.Fatalf("Failed generating PQC key [%s]", err)
+	}
+
+	msg := []byte("Hello World")
+
+	digest, err := provider.Hash(msg, &bccsp.SHAOpts{})
+	if err != nil {
+		t.Fatalf("Failed computing HASH [%s]", err)
+	}
+
+	signature, err := provider.Sign(k, digest, nil)
+	if err != nil {
+		t.Fatalf("Failed generating PQC signature [%s]", err)
+	}
+
+	valid, err := provider.Verify(k, signature, digest, nil)
+	if err != nil {
+		t.Fatalf("Failed verifying PQC signature [%s]", err)
+	}
+	if !valid {
+		t.Fatal("Failed verifying PQC signature. Signature not valid.")
+	}
+
+	pk, err := k.PublicKey()
+	if err != nil {
+		t.Fatalf("Failed getting corresponding public key [%s]", err)
+	}
+
+	valid, err = provider.Verify(pk, signature, digest, nil)
+	if err != nil {
+		t.Fatalf("Failed verifying PQC signature [%s]", err)
+	}
+	if !valid {
+		t.Fatal("Failed verifying PQC signature. Signature not valid.")
+	}
+
+	// Store public key
+	err = ks.StoreKey(pk)
+	if err != nil {
+		t.Fatalf("Failed storing corresponding public key [%s]", err)
+	}
+
+	pk2, err := ks.GetKey(pk.SKI())
+	if err != nil {
+		t.Fatalf("Failed retrieving corresponding public key [%s]", err)
+	}
+
+	valid, err = provider.Verify(pk2, signature, digest, nil)
+	if err != nil {
+		t.Fatalf("Failed verifying PQC signature [%s]", err)
+	}
+	if !valid {
+		t.Fatal("Failed verifying PQC signature. Signature not valid.")
+	}
+}
+
+func TestKeyImportFromX509ECDSAHybridPQCPublicKey(t *testing.T) {
+	t.Parallel()
+	provider, _, cleanup := currentTestConfig.Provider(t)
+	defer cleanup()
+
+	// Generate an ECDSA key and signer
+	// k, err := provider.KeyGen(&bccsp.ECDSAKeyGenOpts{Temporary: false})
+	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: "Dilithium3"})
+	// k.(*pqcPrivateKey).privKey.PublicKey.Pk = []byte{1, 23, 34, 35, 45, 34, 43, 43}
+	require.NoError(t, err)
+	signer, err := signer.New(provider, k)
+	require.NoError(t, err)
+
+	// Generate an PQC key and signer
+	// qK, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false})
+	// require.NoError(t, err)
+	// qSigner, err := signer.New(provider, qK,)
+
+	// Cheat to get access to the underlying raw key,
+	// because we need it to create the X509 certificate extension
+	// pubqK, err := qK.PublicKey()
+	// require.NoError(t, err)
+	// bytes, err := pubqK.Bytes()
+	// require.NoError(t, err)
+	// rawqK, err := pqc.ParsePKIXPublicKey(bytes)
+	// require.NoError(t, err)
+
+	// Export the public key
+	pk, err := k.PublicKey()
+	require.NoError(t, err)
+	pkRaw, err := pk.Bytes()
+	require.NoError(t, err)
+	pub, err := utils.DERToPublicKey(pkRaw)
+	require.NoError(t, err)
+
+	// qkExtensions, err := pqc.BuildAltPublicKeyExtensions(rawqK, pub, qSigner)
+	// require.NoError(t, err)
+	// Generate a self-signed certificate
+	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
+	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
+	extraExtensionData := []byte("extra extension")
+	commonName := "test.example.com"
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName:   commonName,
+			Organization: []string{"Σ Acme Co"},
+			Country:      []string{"US"},
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{
+					Type:  []int{2, 5, 4, 42},
+					Value: "Gopher",
+				},
+				// This should override the Country, above.
+				{
+					Type:  []int{2, 5, 4, 6},
+					Value: "NL",
+				},
+			},
+		},
+		NotBefore: time.Now().Add(-1 * time.Hour),
+		NotAfter:  time.Now().Add(1 * time.Hour),
+
+		SignatureAlgorithm: x509.ECDSAWithSHA256,
+
+		SubjectKeyId: []byte{1, 2, 3, 4},
+		KeyUsage:     x509.KeyUsageCertSign,
+
+		ExtKeyUsage:        testExtKeyUsage,
+		UnknownExtKeyUsage: testUnknownExtKeyUsage,
+
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+
+		OCSPServer:            []string{"http://ocurrentBCCSP.example.com"},
+		IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},
+
+		DNSNames:       []string{"test.example.com"},
+		EmailAddresses: []string{"gopher@golang.org"},
+		IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
+
+		PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
+		PermittedDNSDomains: []string{".example.com", "example.com"},
+
+		CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
+
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:    []int{1, 2, 3, 4},
+				Value: extraExtensionData,
+			},
+		},
+	}
+	// template.ExtraExtensions = append(template.ExtraExtensions, qkExtensions...)
+
+	certRaw, err := x509.CreateCertificate(rand.Reader, &template, &template, pub, signer)
+	require.NoError(t, err)
+
+	cert, err := x509.ParseCertificate(certRaw)
+	require.NoError(t, err)
+
+	// Import the certificate's classical public key
+	pk2, err := provider.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: false})
+	require.NoError(t, err)
+	require.NotNil(t, pk2)
+
+	// Import the certificate's alternate (quantum) public key
+	// qPk2, err := provider.KeyImport(cert, &bccsp.X509AltPublicKeyImportOpts{Temporary: false})
+	// require.NoError(t, err)
+	// require.NotNil(t, qPk2)
+
+	msg := []byte("Hello World")
+
+	digest, err := provider.Hash(msg, &bccsp.SHAOpts{})
+	if err != nil {
+		t.Fatalf("Failed computing HASH [%s]", err)
+	}
+
+	signature, err := provider.Sign(k, digest, nil)
+	if err != nil {
+		t.Fatalf("Failed generating ECDSA signature [%s]", err)
+	}
+
+	valid, err := provider.Verify(pk2, signature, digest, nil)
+	if err != nil {
+		t.Fatalf("Failed verifying ECDSA signature [%s]", err)
+	}
+	if !valid {
+		t.Fatal("Failed verifying ECDSA signature. Signature not valid.")
+	}
+
+	// signature, err = provider.Sign(qK, digest, nil)
+	// if err != nil {
+	// 	t.Fatalf("Failed generating PQC signature [%s]", err)
+	// }
+
+	// valid, err = provider.Verify(qPk2, signature, digest, nil)
+	// if err != nil {
+	// 	t.Fatalf("Failed verifying PQC signature [%s]", err)
+	// }
+	// if !valid {
+	// 	t.Fatal("Failed verifying PQC signature. Signature not valid.")
+	// }
+
 }

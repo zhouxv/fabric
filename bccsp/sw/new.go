@@ -60,10 +60,14 @@ func NewWithParams(securityLevel int, hashFamily string, keyStore bccsp.KeyStore
 
 	// Set the Signers
 	swbccsp.AddWrapper(reflect.TypeOf(&ecdsaPrivateKey{}), &ecdsaSigner{})
+	swbccsp.AddWrapper(reflect.TypeOf(&pqcPrivateKey{}), &pqcSigner{})
 
 	// Set the Verifiers
 	swbccsp.AddWrapper(reflect.TypeOf(&ecdsaPrivateKey{}), &ecdsaPrivateKeyVerifier{})
 	swbccsp.AddWrapper(reflect.TypeOf(&ecdsaPublicKey{}), &ecdsaPublicKeyKeyVerifier{})
+
+	swbccsp.AddWrapper(reflect.TypeOf(&pqcPrivateKey{}), &pqcPrivateKeyVerifier{})
+	swbccsp.AddWrapper(reflect.TypeOf(&pqcPublicKey{}), &pqcPublicKeyKeyVerifier{})
 
 	// Set the Hashers
 	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.SHAOpts{}), &hasher{hash: conf.hashFunction})
@@ -81,6 +85,8 @@ func NewWithParams(securityLevel int, hashFamily string, keyStore bccsp.KeyStore
 	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.AES192KeyGenOpts{}), &aesKeyGenerator{length: 24})
 	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.AES128KeyGenOpts{}), &aesKeyGenerator{length: 16})
 
+	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.PQCKeyGenOpts{}), &pqcKeyGenerator{})
+
 	// Set the key deriver
 	swbccsp.AddWrapper(reflect.TypeOf(&ecdsaPrivateKey{}), &ecdsaPrivateKeyKeyDeriver{})
 	swbccsp.AddWrapper(reflect.TypeOf(&ecdsaPublicKey{}), &ecdsaPublicKeyKeyDeriver{})
@@ -94,5 +100,7 @@ func NewWithParams(securityLevel int, hashFamily string, keyStore bccsp.KeyStore
 	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.ECDSAGoPublicKeyImportOpts{}), &ecdsaGoPublicKeyImportOptsKeyImporter{})
 	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.X509PublicKeyImportOpts{}), &x509PublicKeyImportOptsKeyImporter{bccsp: swbccsp})
 
+	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.PQCPublicKeyImportOpts{}), &pqcPublicKeyImportOptsKeyImporter{})
+	swbccsp.AddWrapper(reflect.TypeOf(&bccsp.PQCGoPublicKeyImportOpts{}), &pqcGoPublicKeyImportOptsKeyImporter{})
 	return swbccsp, nil
 }

@@ -45,7 +45,7 @@ func (conf *config) setSecurityLevelSHA2(level int) (err error) {
 		conf.hashFunction = sha512.New384
 		conf.aesBitLength = 32
 	default:
-		err = fmt.Errorf("Security level not supported [%d]", level)
+		err = fmt.Errorf("security level not supported [%d]", level)
 	}
 	return
 }
@@ -61,7 +61,7 @@ func (conf *config) setSecurityLevelSHA3(level int) (err error) {
 		conf.hashFunction = sha3.New384
 		conf.aesBitLength = 32
 	default:
-		err = fmt.Errorf("Security level not supported [%d]", level)
+		err = fmt.Errorf("scurity level not supported [%d]", level)
 	}
 	return
 }

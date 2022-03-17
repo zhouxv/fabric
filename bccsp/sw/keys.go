@@ -15,6 +15,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+
+	"github.com/hyperledger/fabric/bccsp/pqc"
 )
 
 type pkcs8Info struct {
@@ -114,9 +116,22 @@ func privateKeyToPEM(privateKey interface{}, pwd []byte) ([]byte, error) {
 				Bytes: pkcs8Bytes,
 			},
 		), nil
-
+	case *pqc.SecretKey:
+		if k == nil {
+			return nil, errors.New("Invalid pqc private key. It must be different from nil.")
+		}
+		raw, err := pqc.MarshalPKIXPrivateKey(k)
+		if err != nil {
+			return nil, err
+		}
+		return pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "PQC PRIVATE KEY",
+				Bytes: raw,
+			},
+		), nil
 	default:
-		return nil, errors.New("invalid key type. It must be *ecdsa.PrivateKey")
+		return nil, errors.New("invalid key type. It must be *ecdsa ro *pqc PrivateKey")
 	}
 }
 
@@ -173,7 +188,11 @@ func derToPrivateKey(der []byte) (key interface{}, err error) {
 		return
 	}
 
-	return nil, errors.New("invalid key type. The DER must contain an ecdsa.PrivateKey")
+	if key, err = pqc.ParsePKIXPrivateKey(der); err == nil {
+		return
+	}
+
+	return nil, errors.New("Invalid key type. The DER must contain {rsa|ecdsa|oqs}.PrivateKey")
 }
 
 func pemToPrivateKey(raw []byte, pwd []byte) (interface{}, error) {
@@ -283,7 +302,20 @@ func publicKeyToPEM(publicKey interface{}, pwd []byte) ([]byte, error) {
 				Bytes: PubASN1,
 			},
 		), nil
-
+	case *pqc.PublicKey:
+		if k == nil {
+			return nil, errors.New("Invalid pqc public key. It must be different from nil.")
+		}
+		PubASN1, err := pqc.MarshalPKIXPublicKey(k)
+		if err != nil {
+			return nil, err
+		}
+		return pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "PQC PUBLIC KEY",
+				Bytes: PubASN1,
+			},
+		), nil
 	default:
 		return nil, errors.New("invalid key type. It must be *ecdsa.PublicKey")
 	}
@@ -354,6 +386,10 @@ func pemToPublicKey(raw []byte, pwd []byte) (interface{}, error) {
 func derToPublicKey(raw []byte) (pub interface{}, err error) {
 	if len(raw) == 0 {
 		return nil, errors.New("invalid DER. It must be different from nil")
+	}
+
+	if key, err := pqc.ParsePKIXPublicKey(raw); err == nil {
+		return key, err
 	}
 
 	key, err := x509.ParsePKIXPublicKey(raw)

@@ -110,7 +110,7 @@ package pqc
    	return ERR_OK;
    }
 
- */
+*/
 import "C"
 import (
 	"crypto/x509/pkix"
@@ -123,8 +123,8 @@ import (
 )
 
 const (
-	AlgNistKat AlgType = "NIST-KAT"
-	defaultLibPath string = "liboqs.so"
+	AlgNistKat     AlgType = "NIST-KAT"
+	defaultLibPath string  = "liboqs.so"
 )
 
 // Global package lib singleton
@@ -133,10 +133,10 @@ const (
 var packageLib *OQSLib
 var libmux sync.Mutex
 
-
 var errAlreadyClosed = errors.New("already closed")
 var errAlgDisabledOrUnknown = errors.New("Signature algorithm is unknown or disabled")
 var operationFailed C.libResult = C.ERR_OPERATION_FAILED
+
 func libError(result C.libResult, msg string, a ...interface{}) error {
 
 	if result == C.ERR_OPERATION_FAILED {
@@ -156,7 +156,7 @@ type SecretKey struct {
 }
 
 type PublicKey struct {
-	Pk []byte
+	Pk  []byte
 	Sig OQSSigInfo
 }
 
@@ -200,7 +200,7 @@ func SigName(algID int) (SigType, error) {
 	return SigType(C.GoString(C.OQS_SIG_alg_identifier(C.size_t(algID)))), nil
 }
 
-func(l *OQSLib) initSigTypes() {
+func (l *OQSLib) initSigTypes() {
 	for i := 0; i < MaxNumberSigs(); i++ {
 		sigName, _ := SigName(i)
 		l.supportedSigs = append(l.supportedSigs, sigName)
@@ -209,7 +209,6 @@ func(l *OQSLib) initSigTypes() {
 		}
 	}
 }
-
 
 func (l *OQSLib) initSigMap() (err error) {
 	for _, sigType := range l.enabledSigs {
@@ -225,7 +224,8 @@ func (l *OQSLib) initSigMap() (err error) {
 
 func (l *OQSLib) generateOids() {
 	for i, sig := range l.enabledSigs {
-		l.oidMap[sig] = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 40+i}
+		l.oidMap[sig] = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 40 + i}
+		// fmt.Println(sig, l.oidMap[sig])
 	}
 }
 
@@ -234,12 +234,12 @@ func newLib() (*OQSLib, error) {
 	if err != nil {
 		return nil, err
 	}
-	lib := &OQSLib {
-		ctx: ctx,
-		enabledSigs: []SigType{},
+	lib := &OQSLib{
+		ctx:           ctx,
+		enabledSigs:   []SigType{},
 		supportedSigs: []SigType{},
-		oidMap: make(map[SigType]asn1.ObjectIdentifier),
-		sigMap: make(map[SigType]*OQSSig),
+		oidMap:        make(map[SigType]asn1.ObjectIdentifier),
+		sigMap:        make(map[SigType]*OQSSig),
 	}
 	// Using the library variables,
 	// initialize the list of available signatures
@@ -256,7 +256,6 @@ func newLib() (*OQSLib, error) {
 	return lib, nil
 }
 
-
 func (l *OQSLib) GetAlgorithmFromOID(oid asn1.ObjectIdentifier) Algorithm {
 	for alg, id := range l.oidMap {
 		if oid.Equal(id) {
@@ -269,7 +268,8 @@ func (l *OQSLib) GetAlgorithmFromOID(oid asn1.ObjectIdentifier) Algorithm {
 func (l *OQSLib) GetAlgorithmIdentifier(alg SigType) (ai pkix.AlgorithmIdentifier, err error) {
 	oid, ok := l.oidMap[alg]
 	if !ok {
-		return ai, errors.New("unknown OQS algorithm name") }
+		return ai, errors.New("unknown OQS algorithm name")
+	}
 	ai.Algorithm = oid
 	// The OQS public key algorithms do not require parameters,
 	// therefore a NULL parameters value is required.
@@ -277,7 +277,7 @@ func (l *OQSLib) GetAlgorithmIdentifier(alg SigType) (ai pkix.AlgorithmIdentifie
 	return ai, nil
 }
 
-func (l *OQSLib) EnabledSigs() ([]SigType) {
+func (l *OQSLib) EnabledSigs() []SigType {
 	return l.enabledSigs
 }
 
@@ -304,7 +304,6 @@ func GetLib() (*OQSLib, error) {
 	return packageLib, nil
 
 }
-
 
 func loadCctx(path string) (*C.ctx, error) {
 	p := C.CString(path)
@@ -397,4 +396,3 @@ func GetRandomBytes(nbytes int) (randombytes []byte, err error) {
 
 	return C.GoBytes(bytes, C.int(nbytes)), nil
 }
-

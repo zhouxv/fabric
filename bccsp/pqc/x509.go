@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -16,14 +17,13 @@ import (
 // there will be forthcoming RFCs that precisely describe their expected asn1 format, etc.
 // Eventually, these should be supported by the Go SDK crypto packages directly.
 
-
 type Algorithm = SigType
 
 // pkixPublicKey reflects a PKIX public key structure. See SubjectPublicKeyInfo
 // in RFC 3280.
 type pkixPublicKey struct {
-	Algorithm      pkix.AlgorithmIdentifier
-	PublicKey	   asn1.BitString
+	Algorithm pkix.AlgorithmIdentifier
+	PublicKey asn1.BitString
 }
 
 // asn1.Unmarshal will unmarshal into a data structure like pkixPublicKey, but with RawContent
@@ -33,8 +33,7 @@ type pkixPublicKeyUnpack struct {
 	PublicKey asn1.BitString
 }
 
-
-func MarshalPKIXPublicKey(pub interface{}) ([]byte, error)  {
+func MarshalPKIXPublicKey(pub interface{}) ([]byte, error) {
 	l, err := GetLib()
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to marshal OQS key")
@@ -64,7 +63,9 @@ func ParsePKIXPublicKey(derBytes []byte) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to parse OQS key")
 	}
+	// hex.DecodeString("123")
 	var pku pkixPublicKeyUnpack
+	//
 	if rest, err := asn1.Unmarshal(derBytes, &pku); err != nil {
 		return nil, err
 	} else if len(rest) != 0 {
@@ -76,24 +77,24 @@ func ParsePKIXPublicKey(derBytes []byte) (interface{}, error) {
 			"unknown OQS public key algorithm with id %s", pku.Algorithm.Algorithm.String()))
 	}
 	asn1Data := pku.PublicKey.RightAlign()
-	s := OQSSigInfo {
+	s := OQSSigInfo{
 		Algorithm: alg,
 	}
-	publicKey := &PublicKey { Pk: asn1Data, Sig: s}
+	publicKey := &PublicKey{Pk: asn1Data, Sig: s}
 	return publicKey, nil
 }
 
 type pkixPrivateKey struct {
-	Algorithm     pkix.AlgorithmIdentifier
-	PrivateKey    asn1.BitString
-	PublicKey     asn1.BitString
+	Algorithm  pkix.AlgorithmIdentifier
+	PrivateKey asn1.BitString
+	PublicKey  asn1.BitString
 }
 
 type pkixPrivateKeyUnpack struct {
-	Raw           asn1.RawContent
-	Algorithm     pkix.AlgorithmIdentifier
-	PrivateKey    asn1.BitString
-	PublicKey     asn1.BitString
+	Raw        asn1.RawContent
+	Algorithm  pkix.AlgorithmIdentifier
+	PrivateKey asn1.BitString
+	PublicKey  asn1.BitString
 }
 
 func MarshalPKIXPrivateKey(pub interface{}) ([]byte, error) {
@@ -142,30 +143,28 @@ func ParsePKIXPrivateKey(derBytes []byte) (interface{}, error) {
 	}
 	asn1PrivData := pku.PrivateKey.RightAlign()
 	asn1PubData := pku.PublicKey.RightAlign()
-	s := OQSSigInfo {
+	s := OQSSigInfo{
 		Algorithm: alg,
 	}
 	pk := PublicKey{
-		Pk: asn1PubData,
+		Pk:  asn1PubData,
 		Sig: s,
 	}
-	privKey := &SecretKey {asn1PrivData, pk}
+	privKey := &SecretKey{asn1PrivData, pk}
 	return privKey, nil
 }
-
 
 // Encode quantum public keys as X509 Extensions, per
 // https://tools.ietf.org/id/draft-truskovsky-lamps-pq-hybrid-x509-00.html
 var (
-	oidSubjectAltPublicKeyInfo     = asn1.ObjectIdentifier{2, 5, 29, 71}
-	oidAltSignatureAlgorithm		   = asn1.ObjectIdentifier{2, 5, 29, 72}
-	oidAltSignatureValue			   = asn1.ObjectIdentifier{2, 5, 29, 73}
+	oidSubjectAltPublicKeyInfo = asn1.ObjectIdentifier{2, 5, 29, 71}
+	oidAltSignatureAlgorithm   = asn1.ObjectIdentifier{2, 5, 29, 72}
+	oidAltSignatureValue       = asn1.ObjectIdentifier{2, 5, 29, 73}
 )
 
-
-type KeyMaterial struct{
-	ClassicalBytes    asn1.BitString
-	QuantumBytes	   asn1.BitString
+type KeyMaterial struct {
+	ClassicalBytes asn1.BitString
+	QuantumBytes   asn1.BitString
 }
 
 func buildSubjectAltPublicKeyInfoExt(qk *PublicKey) (pkix.Extension, error) {
@@ -186,7 +185,7 @@ func buildSubjectAltPublicKeyInfoExt(qk *PublicKey) (pkix.Extension, error) {
 	}
 	val, _ := asn1.Marshal(pki)
 
-	return pkix.Extension {
+	return pkix.Extension{
 		Id:       oidSubjectAltPublicKeyInfo,
 		Critical: false,
 		Value:    val,
@@ -212,16 +211,15 @@ func buildSubjectAltPublicKeyInfoExt(qk *PublicKey) (pkix.Extension, error) {
 //
 //}
 
-func buildKmMessage(qkb []byte, ckb []byte) ([]byte) {
+func buildKmMessage(qkb []byte, ckb []byte) []byte {
 	km := KeyMaterial{
 		ClassicalBytes: asn1.BitString{
 			ckb,
 			8 * len(ckb),
 		},
-		QuantumBytes:   asn1.BitString{
+		QuantumBytes: asn1.BitString{
 			qkb,
 			8 * len(qkb),
-
 		},
 	}
 	kmBytes, _ := asn1.Marshal(km)
@@ -285,7 +283,7 @@ func ParseSubjectAltPublicKeyInfoExtension(extensions []pkix.Extension) (*Public
 		return nil, errors.Wrap(err, "Unable to parse subjectaltpublickeyinfo extension")
 	}
 	var publicKey *PublicKey = nil
-	for _, ext := range(extensions) {
+	for _, ext := range extensions {
 		if ext.Id.Equal(oidSubjectAltPublicKeyInfo) {
 			if publicKey != nil {
 				return nil, errors.New("Multiple alternate public keys found")
@@ -301,10 +299,10 @@ func ParseSubjectAltPublicKeyInfoExtension(extensions []pkix.Extension) (*Public
 				return nil, errors.New("unknown OQS public key algorithm")
 			}
 			asn1Data := pku.PublicKey.RightAlign()
-			s := OQSSigInfo {
+			s := OQSSigInfo{
 				Algorithm: alg,
 			}
-			publicKey = &PublicKey { Pk: asn1Data, Sig: s}
+			publicKey = &PublicKey{Pk: asn1Data, Sig: s}
 		}
 	}
 	// If no alt public key extensions are found, this is not an error.
@@ -314,7 +312,7 @@ func ParseSubjectAltPublicKeyInfoExtension(extensions []pkix.Extension) (*Public
 
 func parseAltSignatureValueExtension(extensions []pkix.Extension) ([]byte, error) {
 	var sig []byte = nil
-	for _, ext := range(extensions) {
+	for _, ext := range extensions {
 		if ext.Id.Equal(oidAltSignatureValue) {
 			if sig != nil {
 				return nil, errors.New("Multiple alternate signature values found")
@@ -327,11 +325,10 @@ func parseAltSignatureValueExtension(extensions []pkix.Extension) ([]byte, error
 	return sig, nil
 }
 
-
-func Validate(validationChain []*x509.Certificate)(error) {
+func Validate(validationChain []*x509.Certificate) error {
 	// Check the validation chain for post-quantum validation.
 	// If the rootCA has no post-quantum key material, return immediately: no additional validation needed.
-	rootCert := validationChain[len(validationChain) - 1]
+	rootCert := validationChain[len(validationChain)-1]
 	rootPk, err := ParseSubjectAltPublicKeyInfoExtension(rootCert.Extensions)
 	if err != nil {
 		return err

@@ -15,6 +15,7 @@ import (
 	"reflect"
 
 	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric/bccsp/pqc"
 )
 
 type aes256ImportKeyOptsKeyImporter struct{}
@@ -133,7 +134,46 @@ func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bc
 		// This path only exists to support environments that use RSA certificate
 		// authorities to issue ECDSA certificates.
 		return &rsaPublicKey{pubKey: pk}, nil
+	case *pqc.PublicKey:
+		return ki.bccsp.KeyImporters[reflect.TypeOf(&bccsp.PQCGoPublicKeyImportOpts{})].KeyImport(
+			pk, &bccsp.PQCGoPublicKeyImportOpts{Temporary: opts.Ephemeral()})
 	default:
 		return nil, errors.New("Certificate's public key type not recognized. Supported keys: [ECDSA, RSA]")
 	}
+}
+
+type pqcGoPublicKeyImportOptsKeyImporter struct{}
+
+func (*pqcGoPublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
+	lowLevelKey, ok := raw.(*pqc.PublicKey)
+	if !ok {
+		return nil, errors.New("Invalid raw material. Expected *pqc.PublicKey.")
+	}
+
+	return &pqcPublicKey{lowLevelKey}, nil
+}
+
+type pqcPublicKeyImportOptsKeyImporter struct{}
+
+func (*pqcPublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
+	der, ok := raw.([]byte)
+	if !ok {
+		return nil, errors.New("Invalid raw material. Expected byte array.")
+	}
+
+	if len(der) == 0 {
+		return nil, errors.New("Invalid raw. It must not be nil.")
+	}
+
+	lowLevelKey, err := pqc.ParsePKIXPublicKey(der)
+	if err != nil {
+		return nil, fmt.Errorf("Failed converting PKIX to pqc public key [%s]", err)
+	}
+
+	pqcPK, ok := lowLevelKey.(*pqc.PublicKey)
+	if !ok {
+		return nil, errors.New("Failed casting to PQC public key. Invalid raw material.")
+	}
+
+	return &pqcPublicKey{pqcPK}, nil
 }
