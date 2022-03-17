@@ -6,6 +6,7 @@ go 1.14
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20190920190810-ef0ce1748380
 
 require (
+	github.com/open-quantum-safe/liboqs-go v0.0.0-20220105163900-e0f759d70fa5
 	code.cloudfoundry.org/clock v1.0.0
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Knetic/govaluate v3.0.0+incompatible
