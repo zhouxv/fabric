@@ -9,10 +9,12 @@ package sw
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"crypto/x509"
+
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/hyperledger/fabric/bccsp/utils/x509"
 
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/pqc"
@@ -120,25 +122,28 @@ type x509PublicKeyImportOptsKeyImporter struct {
 func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
 	x509Cert, ok := raw.(*x509.Certificate)
 	if !ok {
-		return nil, errors.New("Invalid raw material. Expected *x509.Certificate.")
+		return nil, errors.New("Invalid raw material. Expected *utils.x509.Certificate.")
 	}
 
 	pk := x509Cert.PublicKey
 
 	switch pk := pk.(type) {
+	case *pqc.PublicKey:
+		return ki.bccsp.KeyImporters[reflect.TypeOf(&bccsp.PQCGoPublicKeyImportOpts{})].KeyImport(
+			pk, &bccsp.PQCGoPublicKeyImportOpts{Temporary: opts.Ephemeral()})
+
 	case *ecdsa.PublicKey:
 		return ki.bccsp.KeyImporters[reflect.TypeOf(&bccsp.ECDSAGoPublicKeyImportOpts{})].KeyImport(
 			pk,
 			&bccsp.ECDSAGoPublicKeyImportOpts{Temporary: opts.Ephemeral()})
+
 	case *rsa.PublicKey:
 		// This path only exists to support environments that use RSA certificate
 		// authorities to issue ECDSA certificates.
 		return &rsaPublicKey{pubKey: pk}, nil
-	case *pqc.PublicKey:
-		return ki.bccsp.KeyImporters[reflect.TypeOf(&bccsp.PQCGoPublicKeyImportOpts{})].KeyImport(
-			pk, &bccsp.PQCGoPublicKeyImportOpts{Temporary: opts.Ephemeral()})
+
 	default:
-		return nil, errors.New("Certificate's public key type not recognized. Supported keys: [ECDSA, RSA]")
+		return nil, errors.New("Certificate's public key type not recognized. Supported keys: [ECDSA, RSA, PQC]")
 	}
 }
 

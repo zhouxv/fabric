@@ -40,7 +40,7 @@ func (k *pqcPrivateKey) SKI() []byte {
 	}
 
 	hash := sha256.New()
-	hash.Write(k.privKey.Sk)
+	hash.Write(k.privKey.Pk)
 	return hash.Sum(nil)
 }
 

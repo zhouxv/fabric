@@ -6,7 +6,6 @@ go 1.14
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20190920190810-ef0ce1748380
 
 require (
-	github.com/open-quantum-safe/liboqs-go v0.0.0-20220105163900-e0f759d70fa5
 	code.cloudfoundry.org/clock v1.0.0
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -48,6 +47,7 @@ require (
 	github.com/mitchellh/mapstructure v1.2.2
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
+	github.com/open-quantum-safe/liboqs-go v0.0.0-20220105163900-e0f759d70fa5
 	github.com/opencontainers/runc v1.0.0-rc8 // indirect
 	github.com/pierrec/lz4 v2.5.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
@@ -65,7 +65,7 @@ require (
 	github.com/willf/bitset v1.1.10
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20181228115726-23731bf9ba55
 	go.uber.org/zap v1.14.1
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
 	golang.org/x/tools v0.0.0-20200131233409-575de47986ce
 	google.golang.org/grpc v1.29.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6

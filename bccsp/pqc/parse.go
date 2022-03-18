@@ -60,8 +60,9 @@ func MarshalPKIXPublicKey(pub interface{}) ([]byte, error) {
 
 func ParsePKIXPublicKey(derBytes []byte) (interface{}, error) {
 	l, err := GetLib()
+
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to parse OQS key")
+		return nil, errors.Wrap(err, "Unable to parse PQC key")
 	}
 	// hex.DecodeString("123")
 	var pku pkixPublicKeyUnpack
@@ -74,7 +75,7 @@ func ParsePKIXPublicKey(derBytes []byte) (interface{}, error) {
 	alg := l.GetAlgorithmFromOID(pku.Algorithm.Algorithm)
 	if alg == UnknownKeyAlgorithm {
 		return nil, errors.New(fmt.Sprintf(
-			"unknown OQS public key algorithm with id %s", pku.Algorithm.Algorithm.String()))
+			"unknown PQC public key algorithm with id %s", pku.Algorithm.Algorithm.String()))
 	}
 	asn1Data := pku.PublicKey.RightAlign()
 	s := OQSSigInfo{

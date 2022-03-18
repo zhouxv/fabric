@@ -113,6 +113,7 @@ package pqc
 */
 import "C"
 import (
+	"crypto"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
@@ -158,6 +159,10 @@ type SecretKey struct {
 type PublicKey struct {
 	Pk  []byte
 	Sig OQSSigInfo
+}
+
+func (p *PublicKey) Equal(crypto.PublicKey) bool {
+	return true
 }
 
 type OQSSig struct {
@@ -225,6 +230,7 @@ func (l *OQSLib) initSigMap() (err error) {
 func (l *OQSLib) generateOids() {
 	for i, sig := range l.enabledSigs {
 		l.oidMap[sig] = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 40 + i}
+		// fmt.Println(sig, l.oidMap[sig])
 		// fmt.Println(sig, l.oidMap[sig])
 	}
 }
