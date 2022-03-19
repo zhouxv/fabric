@@ -1743,7 +1743,7 @@ func TestKeyImportFromX509ECDSAHybridPQCPublicKey2(t *testing.T) {
 		NotBefore: time.Now().Add(-1 * time.Hour),
 		NotAfter:  time.Now().Add(1 * time.Hour),
 
-		SignatureAlgorithm: x509.Dilithium3,
+		SignatureAlgorithm: x509.Dilithium5,
 		// SignatureAlgorithm: x509.ECDSAWithSHA256,
 		SubjectKeyId: []byte{1, 2, 3, 4},
 		KeyUsage:     x509.KeyUsageCertSign,
