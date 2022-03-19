@@ -17,9 +17,9 @@ import (
 	"errors"
 	"fmt"
 
-	// "github.com/hyperledger/fabric/bccsp/utils/x509"
+	// //github.com/hyperledger/fabric/bccsp/utils/x509
 
-	"github.com/hyperledger/fabric/bccsp/pqc"
+	"crypto/pqc"
 )
 
 type pkcs8Info struct {

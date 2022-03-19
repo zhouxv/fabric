@@ -19,8 +19,9 @@ import (
 	"crypto/sha256"
 	"errors"
 
+	"crypto/pqc"
+
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/pqc"
 )
 
 type pqcPrivateKey struct {

@@ -146,6 +146,9 @@ github.com/hyperledger/fabric-amcl/amcl/FP256BN
 github.com/hyperledger/fabric-lib-go/healthz
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/jinzhu/copier v0.3.5
+## explicit
+github.com/jinzhu/copier
 # github.com/konsorten/go-windows-terminal-sequences v0.0.0-20180402223658-b729f2633dfe
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515

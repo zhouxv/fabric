@@ -26,7 +26,8 @@ import (
 	_ "crypto/sha256"
 	_ "crypto/sha512"
 
-	"github.com/hyperledger/fabric/bccsp/pqc"
+	"crypto/pqc"
+
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/cryptobyte"
 	cryptobyte_asn1 "golang.org/x/crypto/cryptobyte/asn1"
@@ -39,6 +40,13 @@ type pkixPublicKey struct {
 	BitString asn1.BitString
 }
 
+// func (c *Certificate) GetX509Cert() x509.Certificate {
+// 	cert := &x509.Certificate{}
+// 	copier.Copy(&c, cert)
+// 	fmt.Printf("cert: %v\n", cert)
+// 	return *cert
+// }
+
 // ParsePKIXPublicKey parses a public key in PKIX, ASN.1 DER form.
 // The encoded public key is a SubjectPublicKeyInfo structure
 // (see RFC 5280, Section 4.1).
@@ -47,22 +55,22 @@ type pkixPublicKey struct {
 // ed25519.PublicKey. More types might be supported in the future.
 //
 // This kind of key is commonly encoded in PEM blocks of type "PUBLIC KEY".
-// func ParsePKIXPublicKey(derBytes []byte) (pub interface{}, err error) {
-// 	var pki publicKeyInfo
-// 	if rest, err := asn1.Unmarshal(derBytes, &pki); err != nil {
-// 		if _, err := asn1.Unmarshal(derBytes, &pkcs1PublicKey{}); err == nil {
-// 			return nil, errors.New("x509: failed to parse public key (use ParsePKCS1PublicKey instead for this key format)")
-// 		}
-// 		return nil, err
-// 	} else if len(rest) != 0 {
-// 		return nil, errors.New("x509: trailing data after ASN.1 of public-key")
-// 	}
-// 	algo := getPublicKeyAlgorithmFromOID(pki.Algorithm.Algorithm)
-// 	if algo == UnknownPublicKeyAlgorithm {
-// 		return nil, errors.New("x509: unknown public key algorithm")
-// 	}
-// 	return parsePublicKey(algo, &pki)
-// }
+func ParsePKIXPublicKey(derBytes []byte) (pub interface{}, err error) {
+	var pki publicKeyInfo
+	if rest, err := asn1.Unmarshal(derBytes, &pki); err != nil {
+		if _, err := asn1.Unmarshal(derBytes, &pkcs1PublicKey{}); err == nil {
+			return nil, errors.New("x509: failed to parse public key (use ParsePKCS1PublicKey instead for this key format)")
+		}
+		return nil, err
+	} else if len(rest) != 0 {
+		return nil, errors.New("x509: trailing data after ASN.1 of public-key")
+	}
+	algo := getPublicKeyAlgorithmFromOID(pki.Algorithm.Algorithm)
+	if algo == UnknownPublicKeyAlgorithm {
+		return nil, errors.New("x509: unknown public key algorithm")
+	}
+	return parsePublicKey(algo, &pki)
+}
 
 func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorithm pkix.AlgorithmIdentifier, err error) {
 	switch pub := pub.(type) {

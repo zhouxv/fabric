@@ -15,7 +15,7 @@ import (
 	"crypto/sha512"
 	"path/filepath"
 
-	// "crypto/x509"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/fabric/bccsp/utils/x509"
+	//github.com/hyperledger/fabric/bccsp/utils/x509
 
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/signer"
@@ -1673,7 +1673,7 @@ func TestKeyImportFromX509ECDSAHybridPQCPublicKey2(t *testing.T) {
 
 	// Generate an ECDSA key and signer
 	// k, err := provider.KeyGen(&bccsp.ECDSAKeyGenOpts{Temporary: false})
-	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: "Dilithium3"})
+	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: "Dilithium5"})
 	if err != nil {
 		t.Fatalf("Failed initiliazing KeyStore [%s]", err)
 	}

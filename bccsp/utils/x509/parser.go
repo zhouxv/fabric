@@ -21,7 +21,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger/fabric/bccsp/pqc"
+	"crypto/pqc"
+
 	"golang.org/x/crypto/cryptobyte"
 	cryptobyte_asn1 "golang.org/x/crypto/cryptobyte/asn1"
 )

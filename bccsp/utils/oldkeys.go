@@ -23,7 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger/fabric/bccsp/pqc"
+	"crypto/pqc"
 )
 
 func DERToPublicKey(raw []byte) (pub interface{}, err error) {

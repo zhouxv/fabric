@@ -30,6 +30,7 @@ require (
 	github.com/hashicorp/go-version v1.0.0
 	github.com/hyperledger/fabric-amcl v0.0.0-20180903120555-6b78f7a22d95
 	github.com/hyperledger/fabric-lib-go v1.0.0
+	github.com/jinzhu/copier v0.3.5
 	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515 // indirect
 	github.com/kr/pretty v0.1.0
 	github.com/magiconair/properties v1.8.0 // indirect

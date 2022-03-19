@@ -22,8 +22,9 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"crypto/pqc"
+
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/pqc"
 	"github.com/open-quantum-safe/liboqs-go/oqs"
 )
 

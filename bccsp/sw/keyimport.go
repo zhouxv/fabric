@@ -9,15 +9,17 @@ package sw
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"crypto/x509"
 
 	"errors"
 	"fmt"
 	"reflect"
 
-	"github.com/hyperledger/fabric/bccsp/utils/x509"
+	//github.com/hyperledger/fabric/bccsp/utils/x509
+
+	"crypto/pqc"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/pqc"
 )
 
 type aes256ImportKeyOptsKeyImporter struct{}
