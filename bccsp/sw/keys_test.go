@@ -125,6 +125,7 @@ func TestECDSAKeys(t *testing.T) {
 		t.Fatalf("Expected type 'PRIVATE KEY' but found '%s'", pemBlock.Type)
 	}
 	_, err = x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
+
 	if err != nil {
 		t.Fatalf("Failed to parse PKCS#8 private key [%s]", err)
 	}
