@@ -7,6 +7,7 @@ replace golang.org/x/sys => golang.org/x/sys v0.0.0-20190920190810-ef0ce1748380
 
 require (
 	code.cloudfoundry.org/clock v1.0.0
+	github.com/AlekSi/gocov-xml v1.0.0 // indirect
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/Microsoft/hcsshim v0.8.6 // indirect
@@ -14,6 +15,7 @@ require (
 	github.com/Shopify/toxiproxy v2.1.4+incompatible // indirect
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
+	github.com/client9/misspell v0.3.4 // indirect
 	github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc // indirect
 	github.com/coreos/go-systemd v0.0.0-20190620071333-e64a0ec8b42a // indirect
 	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
