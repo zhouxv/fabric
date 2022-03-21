@@ -23,7 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger/fabric/bccsp/pqc"
+	"crypto/pqc"
 )
 
 func DERToPublicKey(raw []byte) (pub interface{}, err error) {
@@ -42,4 +42,9 @@ func DERToPublicKey(raw []byte) (pub interface{}, err error) {
 
 	return key2, err2
 
+}
+
+// DERToX509Certificate converts der to x509
+func DERToX509Certificate(asn1Data []byte) (*x509.Certificate, error) {
+	return x509.ParseCertificate(asn1Data)
 }

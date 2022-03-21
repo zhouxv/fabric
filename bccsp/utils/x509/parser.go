@@ -21,16 +21,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger/fabric/bccsp/pqc"
+	"crypto/pqc"
+
 	"golang.org/x/crypto/cryptobyte"
 	cryptobyte_asn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
-
-// pkcs1PublicKey reflects the ASN.1 structure of a PKCS #1 public key.
-type pkcs1PublicKey struct {
-	N *big.Int
-	E int
-}
 
 // isPrintable reports whether the given b is in the ASN.1 PrintableString set.
 // This is a simplified version of encoding/asn1.isPrintable.

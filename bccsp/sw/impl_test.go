@@ -15,7 +15,7 @@ import (
 	"crypto/sha512"
 	"path/filepath"
 
-	// "crypto/x509"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/fabric/bccsp/utils/x509"
+	//github.com/hyperledger/fabric/bccsp/utils/x509
 
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/signer"
@@ -701,7 +701,7 @@ func TestECDSAKeyImportFromECDSAPublicKey(t *testing.T) {
 		t.Fatalf("Failed getting ECDSA raw public key [%s]", err)
 	}
 
-	pub, err := derToPublicKey(pkRaw)
+	pub, err := DerToPublicKey(pkRaw)
 	if err != nil {
 		t.Fatalf("Failed converting raw to ecdsa.PublicKey [%s]", err)
 	}
@@ -749,7 +749,7 @@ func TestECDSAKeyImportFromECDSAPrivateKey(t *testing.T) {
 	}
 
 	// Import the ecdsa.PrivateKey
-	priv, err := privateKeyToDER(key)
+	priv, err := PrivateKeyToDER(key)
 	if err != nil {
 		t.Fatalf("Failed converting raw to ecdsa.PrivateKey [%s]", err)
 	}
@@ -883,7 +883,7 @@ func TestKeyImportFromX509ECDSAPublicKey(t *testing.T) {
 		t.Fatalf("Failed getting ECDSA raw public key [%s]", err)
 	}
 
-	pub, err := derToPublicKey(pkRaw)
+	pub, err := DerToPublicKey(pkRaw)
 	if err != nil {
 		t.Fatalf("Failed converting raw to ECDSA.PublicKey [%s]", err)
 	}
@@ -1673,7 +1673,7 @@ func TestKeyImportFromX509ECDSAHybridPQCPublicKey2(t *testing.T) {
 
 	// Generate an ECDSA key and signer
 	// k, err := provider.KeyGen(&bccsp.ECDSAKeyGenOpts{Temporary: false})
-	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: "Dilithium3"})
+	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: "Dilithium5"})
 	if err != nil {
 		t.Fatalf("Failed initiliazing KeyStore [%s]", err)
 	}
@@ -1743,7 +1743,7 @@ func TestKeyImportFromX509ECDSAHybridPQCPublicKey2(t *testing.T) {
 		NotBefore: time.Now().Add(-1 * time.Hour),
 		NotAfter:  time.Now().Add(1 * time.Hour),
 
-		SignatureAlgorithm: x509.Dilithium3,
+		SignatureAlgorithm: x509.Dilithium5,
 		// SignatureAlgorithm: x509.ECDSAWithSHA256,
 		SubjectKeyId: []byte{1, 2, 3, 4},
 		KeyUsage:     x509.KeyUsageCertSign,
