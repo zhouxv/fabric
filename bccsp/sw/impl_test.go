@@ -14,6 +14,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"path/filepath"
+	"strconv"
 
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -36,6 +37,7 @@ import (
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -1534,299 +1536,493 @@ func TestPQCVerify(t *testing.T) {
 	}
 }
 
-func TestKeyImportFromX509ECDSAHybridPQCPublicKey1(t *testing.T) {
-	t.Parallel()
-	provider, _, cleanup := currentTestConfig.Provider(t)
-	defer cleanup()
+func TestKeyImportFromX509(t *testing.T) {
+	f, err := excelize.OpenFile("/home/dinglab-dell/go-workspace/fabric2.2.5/bccsp/sw/x509.xlsx")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 
-	// Generate an ECDSA key and signer
-	k, err := provider.KeyGen(&bccsp.ECDSAKeyGenOpts{Temporary: false})
-	// k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: "Dilithium3"})
-	// k.(*pqcPrivateKey).privKey.PublicKey.Pk = []byte{1, 23, 34, 35, 45, 34, 43, 43}
-	require.NoError(t, err)
-	signer, err := signer.New(provider, k)
-	require.NoError(t, err)
+	ecdsa384 := "ecdsa384"
+	f.NewSheet(ecdsa384)
+	f.SetCellValue(ecdsa384, "A1", "key store")
+	f.SetCellValue(ecdsa384, "B1", "CreateCertificate")
+	f.SetCellValue(ecdsa384, "C1", "Certificate Size")
+	f.SetCellValue(ecdsa384, "D1", "ParseCertificate")
+	f.SetCellValue(ecdsa384, "E1", "key import")
+	f.SetCellValue(ecdsa384, "F1", "get sk")
 
-	// Generate an PQC key and signer
-	// qK, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false})
-	// require.NoError(t, err)
-	// qSigner, err := signer.New(provider, qK,)
+	var i int
+	for i < 10000 {
+		i++
+		fmt.Println(ecdsa384, i)
+		provider, _, cleanup := currentTestConfig.Provider(t)
+		defer cleanup()
 
-	// Cheat to get access to the underlying raw key,
-	// because we need it to create the X509 certificate extension
-	// pubqK, err := qK.PublicKey()
-	// require.NoError(t, err)
-	// bytes, err := pubqK.Bytes()
-	// require.NoError(t, err)
-	// rawqK, err := pqc.ParsePKIXPublicKey(bytes)
-	// require.NoError(t, err)
+		k, err := provider.KeyGen(&bccsp.ECDSAP384KeyGenOpts{Temporary: false})
+		if err != nil {
+			t.Fatalf("Failed initiliazing KeyStore [%s]", err)
+		}
 
-	// Export the public key
-	pk, err := k.PublicKey()
-	require.NoError(t, err)
-	pkRaw, err := pk.Bytes()
-	require.NoError(t, err)
-	pub, err := utils.DERToPublicKey(pkRaw)
-	require.NoError(t, err)
+		tempDir, err := ioutil.TempDir("", "bccspks")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempDir)
 
-	// qkExtensions, err := pqc.BuildAltPublicKeyExtensions(rawqK, pub, qSigner)
-	// require.NoError(t, err)
-	// Generate a self-signed certificate
-	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
-	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
-	extraExtensionData := []byte("extra extension")
-	commonName := "test.example.com"
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName:   commonName,
-			Organization: []string{"Σ Acme Co"},
-			Country:      []string{"US"},
-			ExtraNames: []pkix.AttributeTypeAndValue{
-				{
-					Type:  []int{2, 5, 4, 42},
-					Value: "Gopher",
-				},
-				// This should override the Country, above.
-				{
-					Type:  []int{2, 5, 4, 6},
-					Value: "NL",
+		start := time.Now()
+		ks, err := NewFileBasedKeyStore(nil, filepath.Join(tempDir, "bccspks"), false)
+		if err != nil {
+			t.Fatalf("Failed initiliazing KeyStore [%s]", err)
+		}
+		ks.StoreKey(k)
+		elapsed := time.Since(start)
+		f.SetCellValue(ecdsa384, "A"+strconv.Itoa(i+1), elapsed.Microseconds())
+
+		require.NoError(t, err)
+		signer, err := signer.New(provider, k)
+		require.NoError(t, err)
+
+		// Export the public key
+		pk, err := k.PublicKey()
+		require.NoError(t, err)
+		pkRaw, err := pk.Bytes()
+		require.NoError(t, err)
+		pub, err := utils.DERToPublicKey(pkRaw)
+		require.NoError(t, err)
+
+		testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
+		testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
+		extraExtensionData := []byte("extra extension")
+		commonName := "test.example.com"
+		template := x509.Certificate{
+			SerialNumber: big.NewInt(1),
+			Subject: pkix.Name{
+				CommonName:   commonName,
+				Organization: []string{"Σ Acme Co"},
+				Country:      []string{"US"},
+				ExtraNames: []pkix.AttributeTypeAndValue{
+					{
+						Type:  []int{2, 5, 4, 42},
+						Value: "Gopher",
+					},
+					// This should override the Country, above.
+					{
+						Type:  []int{2, 5, 4, 6},
+						Value: "NL",
+					},
 				},
 			},
-		},
-		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(1 * time.Hour),
+			NotBefore: time.Now().Add(-1 * time.Hour),
+			NotAfter:  time.Now().Add(1 * time.Hour),
 
-		// SignatureAlgorithm: x509.Dilithium3,
-		SignatureAlgorithm: x509.ECDSAWithSHA256,
-		SubjectKeyId:       []byte{1, 2, 3, 4},
-		KeyUsage:           x509.KeyUsageCertSign,
+			SignatureAlgorithm: x509.ECDSAWithSHA384,
+			// SignatureAlgorithm: x509.ECDSAWithSHA256,
+			SubjectKeyId: []byte{1, 2, 3, 4},
+			KeyUsage:     x509.KeyUsageCertSign,
 
-		ExtKeyUsage:        testExtKeyUsage,
-		UnknownExtKeyUsage: testUnknownExtKeyUsage,
+			ExtKeyUsage:        testExtKeyUsage,
+			UnknownExtKeyUsage: testUnknownExtKeyUsage,
 
-		BasicConstraintsValid: true,
-		IsCA:                  true,
+			BasicConstraintsValid: true,
+			IsCA:                  true,
 
-		OCSPServer:            []string{"http://ocurrentBCCSP.example.com"},
-		IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},
+			OCSPServer:            []string{"http://ocurrentBCCSP.example.com"},
+			IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},
 
-		DNSNames:       []string{"test.example.com"},
-		EmailAddresses: []string{"gopher@golang.org"},
-		IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
+			DNSNames:       []string{"test.example.com"},
+			EmailAddresses: []string{"gopher@golang.org"},
+			IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
 
-		PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
-		PermittedDNSDomains: []string{".example.com", "example.com"},
+			PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
+			PermittedDNSDomains: []string{".example.com", "example.com"},
 
-		CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
+			CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
 
-		ExtraExtensions: []pkix.Extension{
-			{
-				Id:    []int{1, 2, 3, 4},
-				Value: extraExtensionData,
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:    []int{1, 2, 3, 4},
+					Value: extraExtensionData,
+				},
 			},
-		},
+		}
+
+		start = time.Now()
+		certRaw, err := x509.CreateCertificate(rand.Reader, &template, &template, pub, signer)
+		elapsed = time.Since(start)
+		f.SetCellValue(ecdsa384, "B"+strconv.Itoa(i+1), elapsed.Microseconds())
+		f.SetCellValue(ecdsa384, "C"+strconv.Itoa(i+1), len(certRaw))
+		require.NoError(t, err)
+
+		start = time.Now()
+		cert, err := x509.ParseCertificate(certRaw)
+		elapsed = time.Since(start)
+		f.SetCellValue(ecdsa384, "D"+strconv.Itoa(i+1), elapsed.Microseconds())
+		require.NoError(t, err)
+
+		// Import the certificate's classical public key
+		start = time.Now()
+		pk2, err := provider.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: false})
+		elapsed = time.Since(start)
+		f.SetCellValue(ecdsa384, "E"+strconv.Itoa(i+1), elapsed.Microseconds())
+
+		require.NoError(t, err)
+		require.NotNil(t, pk2)
+
+		start = time.Now()
+		_, err = ks.GetKey(k.SKI())
+		elapsed = time.Since(start)
+		f.SetCellValue(ecdsa384, "F"+strconv.Itoa(i+1), elapsed.Microseconds())
+		require.NoError(t, err)
 	}
-	// template.ExtraExtensions = append(template.ExtraExtensions, qkExtensions...)
 
-	certRaw, err := x509.CreateCertificate(rand.Reader, &template, &template, pub, signer)
-	require.NoError(t, err)
+	f.Save()
 
-	cert, err := x509.ParseCertificate(certRaw)
-	require.NoError(t, err)
+}
 
-	// Import the certificate's classical public key
-	pk2, err := provider.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: false})
-	require.NoError(t, err)
-	require.NotNil(t, pk2)
+func TestPQCKeyImportFromX509Time(t *testing.T) {
+	// f := excelize.NewFile()
+	// // 根据指定路径保存文件
+	// if err := f.SaveAs("x509.xlsx"); err != nil {
+	// 	fmt.Println(err)
+	// }
 
-	// Import the certificate's alternate (quantum) public key
-	// qPk2, err := provider.KeyImport(cert, &bccsp.X509AltPublicKeyImportOpts{Temporary: false})
-	// require.NoError(t, err)
-	// require.NotNil(t, qPk2)
-
-	msg := []byte("Hello World")
-
-	digest, err := provider.Hash(msg, &bccsp.SHAOpts{})
-	if err != nil {
-		t.Fatalf("Failed computing HASH [%s]", err)
+	pqcStrings := []string{
+		// "Dilithium2",
+		// "Dilithium3",
+		// "Dilithium5",
+		"Falcon-512",
+		"Falcon-1024",
+		// "picnic3_L1",
+		// "picnic3_L3",
+		// "picnic3_L5",
+		// "Rainbow-I-Circumzenithal",
+		// "Rainbow-III-Circumzenithal",
+		// "Rainbow-V-Circumzenithal",
+		// "SPHINCS+-SHA256-128s-robust",
+		// "SPHINCS+-SHA256-128s-simple",
+		// "SPHINCS+-SHA256-192s-robust",
+		// "SPHINCS+-SHA256-192s-simple",
+		// "SPHINCS+-SHA256-256s-robust",
+		// "SPHINCS+-SHA256-256s-simple",
 	}
-
-	signature, err := provider.Sign(k, digest, nil)
-	if err != nil {
-		t.Fatalf("Failed generating ECDSA signature [%s]", err)
-	}
-
-	valid, err := provider.Verify(pk2, signature, digest, nil)
-	if err != nil {
-		t.Fatalf("Failed verifying ECDSA signature [%s]", err)
-	}
-	if !valid {
-		t.Fatal("Failed verifying ECDSA signature. Signature not valid.")
+	for _, v := range pqcStrings {
+		testPQCKeyImportFromX509(t, v)
 	}
 }
 
-func TestKeyImportFromX509ECDSAHybridPQCPublicKey2(t *testing.T) {
-	t.Parallel()
-	provider, _, cleanup := currentTestConfig.Provider(t)
-	defer cleanup()
-
-	// Generate an ECDSA key and signer
-	// k, err := provider.KeyGen(&bccsp.ECDSAKeyGenOpts{Temporary: false})
-	k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: "Dilithium5"})
+func testPQCKeyImportFromX509(t *testing.T, pqcString string) {
+	// t.Parallel()
+	f, err := excelize.OpenFile("/home/dinglab-dell/go-workspace/fabric2.2.5/bccsp/sw/x509.xlsx")
 	if err != nil {
-		t.Fatalf("Failed initiliazing KeyStore [%s]", err)
+		fmt.Println(err)
+		return
 	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 
-	tempDir, err := ioutil.TempDir("", "bccspks")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	f.NewSheet(pqcString)
+	f.SetCellValue(pqcString, "A1", "key store")
+	f.SetCellValue(pqcString, "B1", "CreateCertificate")
+	f.SetCellValue(pqcString, "C1", "Certificate Size")
+	f.SetCellValue(pqcString, "D1", "ParseCertificate")
+	f.SetCellValue(pqcString, "E1", "key import")
+	f.SetCellValue(pqcString, "F1", "get sk")
 
-	ks, err := NewFileBasedKeyStore(nil, filepath.Join(tempDir, "bccspks"), false)
-	if err != nil {
-		t.Fatalf("Failed initiliazing KeyStore [%s]", err)
-	}
-	ks.StoreKey(k)
+	var i int
+	for i < 10000 {
+		i++
+		fmt.Println(pqcString, i)
+		provider, _, cleanup := currentTestConfig.Provider(t)
+		defer cleanup()
 
-	// k.(*pqcPrivateKey).privKey.PublicKey.Pk = []byte{1, 23, 34, 35, 45, 34, 43, 43}
-	require.NoError(t, err)
-	signer, err := signer.New(provider, k)
-	require.NoError(t, err)
+		k, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false, SignatureScheme: pqcString})
+		if err != nil {
+			t.Fatalf("Failed initiliazing KeyStore [%s]", err)
+		}
 
-	// Generate an PQC key and signer
-	// qK, err := provider.KeyGen(&bccsp.PQCKeyGenOpts{Temporary: false})
-	// require.NoError(t, err)
-	// qSigner, err := signer.New(provider, qK,)
+		tempDir, err := ioutil.TempDir("", "bccspks")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempDir)
 
-	// Cheat to get access to the underlying raw key,
-	// because we need it to create the X509 certificate extension
-	// pubqK, err := qK.PublicKey()
-	// require.NoError(t, err)
-	// bytes, err := pubqK.Bytes()
-	// require.NoError(t, err)
-	// rawqK, err := pqc.ParsePKIXPublicKey(bytes)
-	// require.NoError(t, err)
+		start := time.Now()
+		ks, err := NewFileBasedKeyStore(nil, filepath.Join(tempDir, "bccspks"), false)
+		if err != nil {
+			t.Fatalf("Failed initiliazing KeyStore [%s]", err)
+		}
+		ks.StoreKey(k)
+		elapsed := time.Since(start)
+		f.SetCellValue(pqcString, "A"+strconv.Itoa(i+1), elapsed.Microseconds())
 
-	// Export the public key
-	pk, err := k.PublicKey()
-	require.NoError(t, err)
-	pkRaw, err := pk.Bytes()
-	require.NoError(t, err)
-	pub, err := utils.DERToPublicKey(pkRaw)
-	require.NoError(t, err)
+		require.NoError(t, err)
+		signer, err := signer.New(provider, k)
+		require.NoError(t, err)
 
-	// qkExtensions, err := pqc.BuildAltPublicKeyExtensions(rawqK, pub, qSigner)
-	// require.NoError(t, err)
-	// Generate a self-signed certificate
-	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
-	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
-	extraExtensionData := []byte("extra extension")
-	commonName := "test.example.com"
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName:   commonName,
-			Organization: []string{"Σ Acme Co"},
-			Country:      []string{"US"},
-			ExtraNames: []pkix.AttributeTypeAndValue{
-				{
-					Type:  []int{2, 5, 4, 42},
-					Value: "Gopher",
-				},
-				// This should override the Country, above.
-				{
-					Type:  []int{2, 5, 4, 6},
-					Value: "NL",
+		// Export the public key
+		pk, err := k.PublicKey()
+		require.NoError(t, err)
+		pkRaw, err := pk.Bytes()
+		require.NoError(t, err)
+		pub, err := utils.DERToPublicKey(pkRaw)
+		require.NoError(t, err)
+
+		testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
+		testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
+		extraExtensionData := []byte("extra extension")
+		commonName := "test.example.com"
+		template := x509.Certificate{
+			SerialNumber: big.NewInt(1),
+			Subject: pkix.Name{
+				CommonName:   commonName,
+				Organization: []string{"Σ Acme Co"},
+				Country:      []string{"US"},
+				ExtraNames: []pkix.AttributeTypeAndValue{
+					{
+						Type:  []int{2, 5, 4, 42},
+						Value: "Gopher",
+					},
+					// This should override the Country, above.
+					{
+						Type:  []int{2, 5, 4, 6},
+						Value: "NL",
+					},
 				},
 			},
-		},
-		NotBefore: time.Now().Add(-1 * time.Hour),
-		NotAfter:  time.Now().Add(1 * time.Hour),
+			NotBefore: time.Now().Add(-1 * time.Hour),
+			NotAfter:  time.Now().Add(1 * time.Hour),
 
-		SignatureAlgorithm: x509.Dilithium5,
-		// SignatureAlgorithm: x509.ECDSAWithSHA256,
-		SubjectKeyId: []byte{1, 2, 3, 4},
-		KeyUsage:     x509.KeyUsageCertSign,
+			SignatureAlgorithm: x509.Dilithium5,
+			// SignatureAlgorithm: x509.ECDSAWithSHA256,
+			SubjectKeyId: []byte{1, 2, 3, 4},
+			KeyUsage:     x509.KeyUsageCertSign,
 
-		ExtKeyUsage:        testExtKeyUsage,
-		UnknownExtKeyUsage: testUnknownExtKeyUsage,
+			ExtKeyUsage:        testExtKeyUsage,
+			UnknownExtKeyUsage: testUnknownExtKeyUsage,
 
-		BasicConstraintsValid: true,
-		IsCA:                  true,
+			BasicConstraintsValid: true,
+			IsCA:                  true,
 
-		OCSPServer:            []string{"http://ocurrentBCCSP.example.com"},
-		IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},
+			OCSPServer:            []string{"http://ocurrentBCCSP.example.com"},
+			IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},
 
-		DNSNames:       []string{"test.example.com"},
-		EmailAddresses: []string{"gopher@golang.org"},
-		IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
+			DNSNames:       []string{"test.example.com"},
+			EmailAddresses: []string{"gopher@golang.org"},
+			IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
 
-		PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
-		PermittedDNSDomains: []string{".example.com", "example.com"},
+			PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
+			PermittedDNSDomains: []string{".example.com", "example.com"},
 
-		CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
+			CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
 
-		ExtraExtensions: []pkix.Extension{
-			{
-				Id:    []int{1, 2, 3, 4},
-				Value: extraExtensionData,
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:    []int{1, 2, 3, 4},
+					Value: extraExtensionData,
+				},
 			},
-		},
+		}
+
+		start = time.Now()
+		certRaw, err := x509.CreateCertificate(rand.Reader, &template, &template, pub, signer)
+		elapsed = time.Since(start)
+		f.SetCellValue(pqcString, "B"+strconv.Itoa(i+1), elapsed.Microseconds())
+		f.SetCellValue(pqcString, "C"+strconv.Itoa(i+1), len(certRaw))
+		require.NoError(t, err)
+
+		start = time.Now()
+		cert, err := x509.ParseCertificate(certRaw)
+		elapsed = time.Since(start)
+		f.SetCellValue(pqcString, "D"+strconv.Itoa(i+1), elapsed.Microseconds())
+		require.NoError(t, err)
+
+		// Import the certificate's classical public key
+		start = time.Now()
+		pk2, err := provider.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: false})
+		elapsed = time.Since(start)
+		f.SetCellValue(pqcString, "E"+strconv.Itoa(i+1), elapsed.Microseconds())
+
+		require.NoError(t, err)
+		require.NotNil(t, pk2)
+
+		start = time.Now()
+		_, err = ks.GetKey(k.SKI())
+		elapsed = time.Since(start)
+		f.SetCellValue(pqcString, "F"+strconv.Itoa(i+1), elapsed.Microseconds())
+		require.NoError(t, err)
 	}
-	// template.ExtraExtensions = append(template.ExtraExtensions, qkExtensions...)
 
-	certRaw, err := x509.CreateCertificate(rand.Reader, &template, &template, pub, signer)
-	require.NoError(t, err)
+	f.Save()
 
-	cert, err := x509.ParseCertificate(certRaw)
-	require.NoError(t, err)
+}
 
-	// Import the certificate's classical public key
-	pk2, err := provider.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: false})
-	require.NoError(t, err)
-	require.NotNil(t, pk2)
-
-	// Import the certificate's alternate (quantum) public key
-	// qPk2, err := provider.KeyImport(cert, &bccsp.X509AltPublicKeyImportOpts{Temporary: false})
-	// require.NoError(t, err)
-	// require.NotNil(t, qPk2)
-
-	sk, err := ks.GetKey(k.SKI())
+func TestECDSATime(t *testing.T) {
+	f, err := excelize.OpenFile("/home/dinglab-dell/go-workspace/fabric2.2.5/bccsp/sw/x509.xlsx")
 	if err != nil {
-		fmt.Println(sk)
+		fmt.Println(err)
+		return
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	ecdsa384 := "ecdsa256time"
+	f.NewSheet(ecdsa384)
+	f.SetCellValue(ecdsa384, "A1", "pk sizes")
+	f.SetCellValue(ecdsa384, "B1", "sk sizes")
+	f.SetCellValue(ecdsa384, "C1", "sig size")
+	f.SetCellValue(ecdsa384, "D1", "sig time")
+	f.SetCellValue(ecdsa384, "E1", "virify time")
+	f.SetCellValue(ecdsa384, "F1", "geneKey time")
+
+	var i int
+	for i < 10000 {
+		fmt.Println(ecdsa384, i)
+		i++
+		provider, _, cleanup := currentTestConfig.Provider(t)
+		defer cleanup()
+
+		start := time.Now()
+		k, err := provider.KeyGen(&bccsp.ECDSAP256KeyGenOpts{Temporary: false})
+		elapsed := time.Since(start)
+		if err != nil {
+			t.Fatalf("Failed generating ECDSA key [%s]", err)
+		}
+		f.SetCellValue(ecdsa384, "F"+strconv.Itoa(i+1), elapsed.Microseconds())
+
+		pk, _ := k.PublicKey()
+		pkBytes, _ := pk.Bytes()
+
+		// skbuf := new(bytes.Buffer)
+		// binary.Write(skbuf, binary.LittleEndian, pk)
+		// if err != nil {
+		// 	fmt.Println("binary.Write failed:", err)
+		// }
+		// fmt.Println("pk:", skbuf)
+		sk := k.(*ecdsaPrivateKey)
+
+		skByte, err := PrivateKeyToDER(sk.privKey)
+		if err != nil {
+			t.Fatalf("Failed PrivateKeyToDER [%s]", err)
+		}
+
+		f.SetCellValue(ecdsa384, "A"+strconv.Itoa(i+1), len(pkBytes))
+		f.SetCellValue(ecdsa384, "B"+strconv.Itoa(i+1), len(skByte))
+
+		msg := []byte("This is the message to sign")
+
+		start = time.Now()
+		digest, err := provider.Hash(msg, &bccsp.SHAOpts{})
+		if err != nil {
+			t.Fatalf("Failed computing HASH [%s]", err)
+		}
+		signature, err := provider.Sign(k, digest, nil)
+		elapsed = time.Since(start)
+		f.SetCellValue(ecdsa384, "C"+strconv.Itoa(i+1), len(signature))
+		f.SetCellValue(ecdsa384, "D"+strconv.Itoa(i+1), elapsed.Microseconds())
+
+		if err != nil {
+			t.Fatalf("Failed generating ECDSA signature [%s]", err)
+		}
+		if len(signature) == 0 {
+			t.Fatal("Failed generating ECDSA key. Signature must be different from nil")
+		}
+
+		start = time.Now()
+		valid, err := provider.Verify(k, signature, digest, nil)
+		elapsed = time.Since(start)
+		f.SetCellValue(ecdsa384, "E"+strconv.Itoa(i+1), elapsed.Microseconds())
+		if err != nil {
+			t.Fatalf("Failed verifying ECDSA signature [%s]", err)
+		}
+		if !valid {
+			t.Fatal("Failed verifying ECDSA signature. Signature not valid.")
+		}
+
 	}
 
-	msg := []byte("Hello World")
+	// ecdsa384 = "ecdsa384time"
+	// f.NewSheet(ecdsa384)
+	// f.SetCellValue(ecdsa384, "A1", "pk sizes")
+	// f.SetCellValue(ecdsa384, "B1", "sk sizes")
+	// f.SetCellValue(ecdsa384, "C1", "sig size")
+	// f.SetCellValue(ecdsa384, "D1", "sig time")
+	// f.SetCellValue(ecdsa384, "E1", "virify time")
+	// f.SetCellValue(ecdsa384, "F1", "geneKey time")
+	// t.Parallel()
 
-	digest, err := provider.Hash(msg, &bccsp.SHAOpts{})
-	if err != nil {
-		t.Fatalf("Failed computing HASH [%s]", err)
-	}
+	// i = 0
+	// for i < 10000 {
+	// 	i++
+	// 	fmt.Println(ecdsa384, i)
+	// 	provider, _, cleanup := currentTestConfig.Provider(t)
+	// 	defer cleanup()
 
-	signature, err := provider.Sign(sk, digest, nil)
-	if err != nil {
-		t.Fatalf("Failed generating PQC signature [%s]", err)
-	}
+	// 	start := time.Now()
+	// 	k, err := provider.KeyGen(&bccsp.ECDSAP384KeyGenOpts{Temporary: false})
+	// 	elapsed := time.Since(start)
+	// 	if err != nil {
+	// 		t.Fatalf("Failed generating ECDSA key [%s]", err)
+	// 	}
+	// 	f.SetCellValue(ecdsa384, "F"+strconv.Itoa(i+1), elapsed.Microseconds())
 
-	valid, err := provider.Verify(pk2, signature, digest, nil)
-	if err != nil {
-		t.Fatalf("Failed verifying PQC signature [%s]", err)
-	}
-	if !valid {
-		t.Fatal("Failed verifying PQC signature. Signature not valid.")
-	}
+	// 	pk, _ := k.PublicKey()
+	// 	pkBytes, _ := pk.Bytes()
 
-	// signature, err = provider.Sign(qK, digest, nil)
-	// if err != nil {
-	// 	t.Fatalf("Failed generating PQC signature [%s]", err)
+	// 	// skbuf := new(bytes.Buffer)
+	// 	// binary.Write(skbuf, binary.LittleEndian, pk)
+	// 	// if err != nil {
+	// 	// 	fmt.Println("binary.Write failed:", err)
+	// 	// }
+	// 	// fmt.Println("pk:", skbuf)
+	// 	sk := k.(*ecdsaPrivateKey)
+
+	// 	skByte, err := PrivateKeyToDER(sk.privKey)
+	// 	if err != nil {
+	// 		t.Fatalf("Failed PrivateKeyToDER [%s]", err)
+	// 	}
+
+	// 	f.SetCellValue(ecdsa384, "A"+strconv.Itoa(i+1), len(pkBytes))
+	// 	f.SetCellValue(ecdsa384, "B"+strconv.Itoa(i+1), len(skByte))
+
+	// 	msg := []byte("This is the message to sign")
+
+	// 	start = time.Now()
+	// 	digest, err := provider.Hash(msg, &bccsp.SHAOpts{})
+	// 	if err != nil {
+	// 		t.Fatalf("Failed computing HASH [%s]", err)
+	// 	}
+	// 	signature, err := provider.Sign(k, digest, nil)
+	// 	elapsed = time.Since(start)
+	// 	f.SetCellValue(ecdsa384, "C"+strconv.Itoa(i+1), len(signature))
+	// 	f.SetCellValue(ecdsa384, "D"+strconv.Itoa(i+1), elapsed.Microseconds())
+
+	// 	if err != nil {
+	// 		t.Fatalf("Failed generating ECDSA signature [%s]", err)
+	// 	}
+	// 	if len(signature) == 0 {
+	// 		t.Fatal("Failed generating ECDSA key. Signature must be different from nil")
+	// 	}
+
+	// 	start = time.Now()
+	// 	valid, err := provider.Verify(k, signature, digest, nil)
+	// 	elapsed = time.Since(start)
+	// 	f.SetCellValue(ecdsa384, "E"+strconv.Itoa(i+1), elapsed.Microseconds())
+	// 	if err != nil {
+	// 		t.Fatalf("Failed verifying ECDSA signature [%s]", err)
+	// 	}
+	// 	if !valid {
+	// 		t.Fatal("Failed verifying ECDSA signature. Signature not valid.")
+	// 	}
+
 	// }
 
-	// valid, err = provider.Verify(qPk2, signature, digest, nil)
-	// if err != nil {
-	// 	t.Fatalf("Failed verifying PQC signature [%s]", err)
-	// }
-	// if !valid {
-	// 	t.Fatal("Failed verifying PQC signature. Signature not valid.")
-	// }
-
+	f.Save()
 }
